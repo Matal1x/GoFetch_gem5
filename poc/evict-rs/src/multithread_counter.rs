@@ -19,17 +19,26 @@ pub struct CounterTimer;
  */
 unsafe fn counter_thread() {
     unsafe {
-        pin_cpu(6)
+        // pin_cpu(1)
+        pin_cpu(3)
     };
     loop {
         // write_volatile(&mut CTR, read_volatile(&CTR) + 1);
+        // asm!{
+        //     "eor x0, x0, x0",
+        //     "1:",
+        //     "str x0, [{cnt_addr}]",
+        //     "add x0, x0, 1",
+        //     "b 1b",
+        //     cnt_addr = in(reg) &mut CTR as *mut u64 as u64,
+        // }
         asm!{
-            "eor x0, x0, x0",
+            "xor rax, rax",
             "1:",
-            "str x0, [{cnt_addr}]",
-            "add x0, x0, 1",
-            "b 1b",
-            cnt_addr = in(reg) &mut CTR as *mut u64 as u64,
+            "mov [{}], rax",
+            "inc rax",
+            "jmp 1b",
+            in(reg) &mut CTR as *mut u64,
         }
     }
 }
@@ -53,11 +62,13 @@ impl Timer for CounterTimer {
 
     fn time<F: Fn()>(&self, f: F) -> u64 {
         let t0 = self.read_counter();
-        unsafe { asm!("dsb ish") };
-        unsafe { asm!("isb sy") };
+        // unsafe { asm!("dsb ish") };
+        // unsafe { asm!("isb sy") };
+        unsafe {core::arch::asm!("mfence") };
         f();
-        unsafe { asm!("dsb ish") };
-        unsafe { asm!("isb sy") };
+        // unsafe { asm!("dsb ish") };
+        // unsafe { asm!("isb sy") };
+        unsafe {core::arch::asm!("mfence") };
         let dt = self.read_counter();
         assert!(dt >= t0, "{}-{}", dt, t0);
         dt.wrapping_sub(t0)
@@ -65,11 +76,13 @@ impl Timer for CounterTimer {
 
     fn time_load(&self, victim: *mut u8) -> u64 {
         let t0 = self.read_counter();
-        unsafe { asm!("dsb ish") };
-        unsafe { asm!("isb sy") };
+        // unsafe { asm!("dsb ish") };
+        // unsafe { asm!("isb sy") };
+        unsafe {core::arch::asm!("mfence") };
         unsafe { victim.read_volatile()};
-        unsafe { asm!("dsb ish") };
-        unsafe { asm!("isb sy") };
+        // unsafe { asm!("dsb ish") };
+        // unsafe { asm!("isb sy") };
+        unsafe {core::arch::asm!("mfence") };
         let dt = self.read_counter();
         assert!(dt >= t0, "{}-{}", dt, t0);
         dt.wrapping_sub(t0)

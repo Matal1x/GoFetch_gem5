@@ -65,14 +65,16 @@ impl<'a> EvictionSet<'a> {
     ) -> u64 {
         // First load the victim.
         unsafe { victim.read_volatile() };
-        unsafe { core::arch::asm!("dsb ish") };
-        unsafe { core::arch::asm!("isb sy") };
+        // unsafe { core::arch::asm!("dsb ish") };
+        // unsafe { core::arch::asm!("isb sy") };
+        unsafe { core::arch::asm!("mfence") };
 
         // Access this eviction set in an attempt to evict the victim.
         self.access();
 
-        unsafe { core::arch::asm!("dsb ish") };
-        unsafe { core::arch::asm!("isb sy") };
+        // unsafe { core::arch::asm!("dsb ish") };
+        // unsafe { core::arch::asm!("isb sy") };
+        unsafe { core::arch::asm!("mfence") };
 
         // Load the victim again, but this time the access to determine if the
         // victim is still cached or whether it actually got evicted.

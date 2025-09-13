@@ -5,33 +5,35 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sched.h>     
+#include <time.h>       
 
 #include "c_augury.h"
 
 #define MSB_MASK 0x8000000000000000
 
-uint64_t (*ns_ptr)(clockid_t) = &clock_gettime_nsec_np;
-
 uint64_t get_time_nano(int32_t zero_dependency)
 {
-    /* MEM_BARRIER; */
-	uint64_t t = zero_dependency;
-	/* t += mach_absolute_time(); */
-    t += (*(ns_ptr + zero_dependency))(CLOCK_UPTIME_RAW);
-	/* t += READ_TIMER; */
-    /* MEM_BARRIER; */
-	return t;
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
 }
 
 void pin_cpu(size_t core_no)
 {
-	if (core_no <= 3) { // ICESTORM
-		pthread_set_qos_class_self_np(QOS_CLASS_BACKGROUND, 0);
-	} else if (core_no <= 7) { // FIRESTORM
-		pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
-	} else {
-		assert(0 && "error! make sure 0 <= core_no <= 7");
-	}
+    if (core_no >= 4) { 
+        assert(0 && "error! make sure 0 <= core_no <= 3");
+    }
+    
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(core_no, &cpuset);
+    
+    int result = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
+    if (result != 0) {
+        perror("pthread_setaffinity_np");
+        assert(0 && "Failed to set CPU affinity");
+    }
 }
 
 uint64_t c_sleep(uint64_t duration, uint64_t __trash)
@@ -41,7 +43,6 @@ uint64_t c_sleep(uint64_t duration, uint64_t __trash)
     uint64_t base = 1;
 
     T1 = get_time_nano(__trash & MSB_MASK);
-
     __trash = (__trash + T1) & MSB_MASK;
 
     do

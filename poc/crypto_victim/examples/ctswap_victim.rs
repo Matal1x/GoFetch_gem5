@@ -32,7 +32,7 @@ fn ctswap_handler(
         .map_mut()
         .unwrap();
     src_data.fill(0x00);
-    let src_data_ptr: *mut u64 = unsafe{src_data.as_mut_ptr().add(0x1234)} as *mut u64;
+    let src_data_ptr: *mut u64 = unsafe{src_data.as_mut_ptr().add(0x1000)} as *mut u64;
     println!("dst_data addr: {:p}", dst_data_ptr);
     println!("src_data addr: {:p}", src_data_ptr);
     println!("input_data addr: {:p}", input_data_ptr);
@@ -86,7 +86,7 @@ fn main() {
     let sk = sk.parse::<u64>().unwrap();
     println!("[+] Secret Key: {}", sk);
     // pin to performance core
-    unsafe{ pin_cpu(7); }
+    unsafe{ pin_cpu(0); }
 
     let listener = TcpListener::bind("0.0.0.0:3333").unwrap();
     // accept connections and process them, spawning a new thread for each one

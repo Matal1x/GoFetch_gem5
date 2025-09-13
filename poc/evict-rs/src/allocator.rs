@@ -128,22 +128,48 @@ impl Allocator {
 
     // use reverse engineering M1 L2 set mapping
     #[cfg(target_os = "linux")]
+    // pub fn l2_evset_gen(
+    //     &mut self, 
+    //     ways: usize,
+    //     slice: u8,
+    //     pfn_set: u8
+    // ) -> CacheLineSet {
+    //     let mut cache_lines = vec![];
+    //     let mut cur_slice: u8 = 0;
+    //     let mut cur_pfn_set: u8 = 0;
+    //     let mut cur_num: usize = 0;
+    //     while cur_num < ways {
+    //         let cache_line = self.allocate_line();
+    //         parse_pfn(&cache_line, &mut cur_slice, &mut cur_pfn_set);
+    //         if (cur_slice == slice) && (cur_pfn_set == pfn_set) {
+    //             cache_lines.push(cache_line);
+    //             cur_num += 1;
+    //         }
+    //     }
+
+    //     CacheLineSet {
+    //         cache_lines,
+    //     }
+    // }
     pub fn l2_evset_gen(
         &mut self, 
         ways: usize,
-        slice: u8,
-        pfn_set: u8
+        set_index: usize,  // Use set index instead of slice/pfn
     ) -> CacheLineSet {
         let mut cache_lines = vec![];
-        let mut cur_slice: u8 = 0;
-        let mut cur_pfn_set: u8 = 0;
-        let mut cur_num: usize = 0;
-        while cur_num < ways {
+        
+        while cache_lines.len() < ways {
             let cache_line = self.allocate_line();
-            parse_pfn(&cache_line, &mut cur_slice, &mut cur_pfn_set);
-            if (cur_slice == slice) && (cur_pfn_set == pfn_set) {
+            
+            // For x86, calculate set index based on address bits
+            // This assumes 1MB 8-way L2 cache with 64-byte lines
+            let addr = cache_line as usize;
+            
+            // Calculate set index (bits 6-16 for 2048 sets)
+            let calculated_set = (addr >> 6) & 0x7FF; // Mask for 11 bits (2048 sets)
+            
+            if calculated_set == set_index {
                 cache_lines.push(cache_line);
-                cur_num += 1;
             }
         }
 

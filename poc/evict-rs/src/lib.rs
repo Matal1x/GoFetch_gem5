@@ -20,21 +20,32 @@ pub const SAMPLES: usize = 100;
 
 // Hardware setting
 pub const L1_CACHE_WAYS: usize = 8;
-pub const L2_CACHE_WAYS: usize = 12;
-pub const CACHE_LINE_SIZE_L2: usize = 128;
-pub const NATIVE_PAGE_SIZE: usize = 16 * 1024;
+pub const L2_CACHE_WAYS: usize = 8;
+pub const CACHE_LINE_SIZE_L2: usize = 64;
+pub const NATIVE_PAGE_SIZE: usize = 4 * 1024;
 pub const MSB_MASK: u64 = 0x8000000000000000;
 const KB: usize = 1024;
 const MB: usize = 1024 * 1024;
 
 /* pin cpu */
+// pub unsafe fn pin_cpu(cpu_id: usize) {
+//     if cpu_id <= 3 {
+//         libc::pthread_set_qos_class_self_np(libc::qos_class_t::QOS_CLASS_BACKGROUND, 0);
+//     } else if cpu_id <= 7 {
+//         libc::pthread_set_qos_class_self_np(libc::qos_class_t::QOS_CLASS_USER_INTERACTIVE, 0);
+//     } else {
+//         panic!("error! make sure 0 <= core_no <= 7");
+//     }
+// }
 pub unsafe fn pin_cpu(cpu_id: usize) {
-    if cpu_id <= 3 {
-        libc::pthread_set_qos_class_self_np(libc::qos_class_t::QOS_CLASS_BACKGROUND, 0);
-    } else if cpu_id <= 7 {
-        libc::pthread_set_qos_class_self_np(libc::qos_class_t::QOS_CLASS_USER_INTERACTIVE, 0);
-    } else {
-        panic!("error! make sure 0 <= core_no <= 7");
+    if cpu_id >= 4 {
+        panic!("error! make sure 0 <= core_no <= 3");
+    }
+    let mut cpu_set: libc::cpu_set_t = std::mem::zeroed();
+    libc::CPU_SET(cpu_id, &mut cpu_set);
+    let result = libc::sched_setaffinity(0, std::mem::size_of::<libc::cpu_set_t>(), &cpu_set);
+    if result != 0 {
+        panic!("Failed to set CPU affinity");
     }
 }
 
@@ -121,7 +132,8 @@ pub fn eviction_set_gen64(mut allocator: &mut Allocator,
 ) {
     let mut num_valid_evset = 0;
     // Allocate the victim that resides in different set
-    let victim_size: usize = (12*MB + 128*KB) * 8;
+    // let victim_size: usize = (12*MB + 128*KB) * 8;
+    let victim_size: usize = (1*MB + CACHE_LINE_SIZE_L2*KB) * 8;
     let mut victim = MmapOptions::new(victim_size + CACHE_LINE_SIZE_L2)
     .map_mut()
     .unwrap();
@@ -171,7 +183,8 @@ pub fn eviction_set_gen64(mut allocator: &mut Allocator,
         let mut dup_flag = 0;
 
         loop {
-            allocator.set_offset(victim_ptr_tmp as usize & 0x3fff);
+            // allocator.set_offset(victim_ptr_tmp as usize & 0x3fff);
+            allocator.set_offset(victim_ptr_tmp as usize & 0xfff);
             let mut eviction_set = match eviction_set_generation(victim_ptr_tmp, &mut allocator, timer) {
                 Ok(result) => result,
                 Err(_) => {
@@ -187,7 +200,8 @@ pub fn eviction_set_gen64(mut allocator: &mut Allocator,
 
             // Duplication refers to bad eviction set
             for i in 0..eviction_set.cache_lines.len() {
-                eviction_set.cache_lines[i] = ((eviction_set.cache_lines[i] as u64) & 0xffffffffffffc000) as *mut u8;
+                // eviction_set.cache_lines[i] = ((eviction_set.cache_lines[i] as u64) & 0xffffffffffffc000) as *mut u8;
+                eviction_set.cache_lines[i] = ((eviction_set.cache_lines[i] as u64) & 0xfffffffffffff000 ) as *mut u8;
                 for j in 0..victim_array_cache_lines.len() {
                     if eviction_set.cache_lines[i] == victim_array_cache_lines[j] {
                         println!("[+] Found Duplication!!");
