@@ -34,11 +34,12 @@ unsafe fn counter_thread() {
         // }
         asm!{
             "xor rax, rax",
-            "1:",
+            "2:", 
             "mov [{}], rax",
             "inc rax",
-            "jmp 1b",
+            "jmp 2b",  
             in(reg) &mut CTR as *mut u64,
+            options(noreturn)  
         }
     }
 }

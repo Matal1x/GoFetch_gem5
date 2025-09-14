@@ -1,3 +1,5 @@
+
+#define _GNU_SOURCE
 #include <assert.h>
 #include <fcntl.h>
 #include <pthread.h>
@@ -7,7 +9,8 @@
 #include <sys/mman.h>
 #include <sched.h>     
 #include <time.h>       
-
+#include <pthread.h>
+#include <sched.h>
 #include "c_augury.h"
 
 #define MSB_MASK 0x8000000000000000
