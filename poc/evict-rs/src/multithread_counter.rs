@@ -32,15 +32,8 @@ unsafe fn counter_thread() {
         //     "b 1b",
         //     cnt_addr = in(reg) &mut CTR as *mut u64 as u64,
         // }
-        asm!{
-            "xor rax, rax",
-            "2:", 
-            "mov [{}], rax",
-            "inc rax",
-            "jmp 2b",  
-            in(reg) &mut CTR as *mut u64,
-            options(noreturn)  
-        }
+        let v = core::ptr::read_volatile(&CTR);
+        core::ptr::write_volatile(&mut CTR, v.wrapping_add(1));
     }
 }
 

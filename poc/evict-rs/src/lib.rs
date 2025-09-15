@@ -24,6 +24,7 @@ pub const L2_CACHE_WAYS: usize = 8;
 pub const CACHE_LINE_SIZE_L2: usize = 64;
 pub const NATIVE_PAGE_SIZE: usize = 4 * 1024;
 pub const MSB_MASK: u64 = 0x8000000000000000;
+pub const NUM_EVESET: usize = 32;
 const KB: usize = 1024;
 const MB: usize = 1024 * 1024;
 
@@ -62,7 +63,7 @@ pub fn eviction_set_generation<T: Timer>(
             &mut rng,
             timer,
             target,
-            8192,
+            2048, // 1MB, 8-Way, 64B line
             SAMPLES,
             THRESHOLD,
         );
@@ -125,7 +126,7 @@ pub fn eviction_set_generation<T: Timer>(
     }
 }
 
-/* Generate 64 unique eviction sets */
+/* Generate NUM_EVESET unique eviction sets */
 pub fn eviction_set_gen64(mut allocator: &mut Allocator, 
     victim_array_cache_lines: &mut Vec<*mut u8>,
     timer: &MyTimer
@@ -222,11 +223,11 @@ pub fn eviction_set_gen64(mut allocator: &mut Allocator,
             break;
         }
         // if got 64 evsets already, exit
-        if num_valid_evset == 64 {
+        if num_valid_evset == NUM_EVESET {
             break;
         }
     }
-    println!("[+] Finish generating 64 frame evset!");
+    println!("[+] Finish generating 32 frame evset!");
 }
 
 pub fn evset_vec_to_evset(
@@ -248,9 +249,9 @@ pub fn evset_vec_to_evset(
     for i in 0..evset_size {
         result_evset.push(unsafe{vec_evset[start_idx + i].add(page_offset)});
     }
-    // for i in 0..result_evset.len() {
-    //     println!("{:p}", result_evset[i]);
-    // }
+    for i in 0..result_evset.len() {
+        println!("{:p}", result_evset[i]);
+    }
 }
 
 pub fn evset_vec_to_linked_list(

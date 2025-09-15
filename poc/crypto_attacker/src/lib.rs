@@ -1,6 +1,6 @@
 pub const KB: usize = 1024;
 pub const MB: usize = 1024 * 1024;
-pub const NUM_EVSETS: usize = 64;
+pub const NUM_EVSETS: usize = 32;
 pub const CACHE_LINE_SIZE_L2: usize = 64;
 pub const CACHE_LINE_SIZE_L1: usize = 64;
 pub const L1_CACHE_WAYS: usize = 8;

@@ -161,7 +161,6 @@ impl Allocator {
         while cache_lines.len() < ways {
             let cache_line = self.allocate_line();
             
-            // For x86, calculate set index based on address bits
             // This assumes 1MB 8-way L2 cache with 64-byte lines
             let addr = cache_line as usize;
             

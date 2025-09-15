@@ -455,7 +455,7 @@ fn main() {
     };
 
     // load prefetch target search range
-    let dyld_space_str: Vec<String> = read_to_string("dyld_space.txt").unwrap().lines().map(String::from).collect();
+    let dyld_space_str: Vec<String> = read_to_string("so_space.txt").unwrap().lines().map(String::from).collect();
     println!("[+] Grab dyld search space from file...");
     let victim_cl_start = match u64::from_str_radix(&(dyld_space_str[0][2..]), 16) {
         // Ok(result) => result & 0xffffffffffffc000,
